@@ -7,7 +7,7 @@ use Lexical::Failure;
 use Keyword::Simple;
 use PadWalker 'peek_my';
 
-our $VERSION = '0.000003';
+our $VERSION = '0.000004';
 
 #====[ Implementation ]============
 
@@ -28,6 +28,8 @@ sub import {
     ON_FAILURE($fail_mode // 'undef');
 
     # Install the API...
+    no strict 'refs';
+    *{caller().'::run'} = \&run;
 
     Keyword::Simple::define 'run_with', sub {
         my ($source_ref) = @_;
@@ -36,19 +38,6 @@ sub import {
             . qq{$runtime_lexhints = Running::Commentary::_idem $runtime_lexhints, }
             . ${$source_ref};
     };
-
-    if ($] >= 5.018) {
-        Keyword::Simple::define 'run', sub {
-            my ($source_ref) = @_;
-            ${$source_ref}
-                = qq{Running::Commentary::run eval'$runtime_lexhints',}
-                . ${$source_ref};
-        };
-    }
-    else {
-        no strict 'refs';
-        *{caller().'::run'} = \&run;
-    }
 }
 
 # Track nested calls to run()...
@@ -61,7 +50,7 @@ my $DEF_COLOUR    = { MESSAGE => 'bold white', DONE => 'bold cyan', FAILED => 'b
 # The entire interface...
 sub run {
     # Parse out args (including local runtime hints as defaults)...
-    my @lex_args = $] < 5.018 ? @{ peek_my(1)->{$runtime_lexhints} // [] } : ();
+    my @lex_args = @{ peek_my(1)->{$runtime_lexhints} // [] };
     my ($opt_ref, @args) = _parse_args(@lex_args, @_);
 
     # Resolve main args...
@@ -286,7 +275,7 @@ Running::Commentary - call C<system> cleanly, with tracking messages
 
 =head1 VERSION
 
-This document describes Running::Commentary version 0.000003
+This document describes Running::Commentary version 0.000004
 
 
 =head1 SYNOPSIS

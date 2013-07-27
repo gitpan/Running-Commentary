@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use autodie;
-use 5.014;
+use 5.018;
 
 use Running::Commentary; # {fail => 'failobj'};
 
@@ -15,7 +15,7 @@ run_with -colour => { DONE => 'green', FAILED => 'red on_yellow', OUTPUT => 'blu
 #run_with -nocolour;
 
 {
-#    run_with -noncritical;
+    run_with -noncritical;
     run 'A quiet test'    => 'echo "ere"';
     my $result = run 'A quiet problem' => 'hdshadasasdkj';
     say $result;

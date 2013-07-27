@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Running-Commentary
-version:            0.000003
+version:            0.000004
 abstract:           call C<system> cleanly, with tracking messages
 author:
     - Damian Conway <DCONWAY@CPAN.org>
