@@ -13,7 +13,6 @@ WriteMakefile(
     PREREQ_PM => {
         'Lexical::Failure' => 0,
         'Keyword::Simple'  => 0,
-        'PadWalker'        => 0,
         'Scalar::Util'     => 0,
         'List::Util'       => 0,
         'Data::Dumper'     => 0,

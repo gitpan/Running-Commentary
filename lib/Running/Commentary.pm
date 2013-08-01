@@ -5,9 +5,8 @@ use strict;
 use 5.014;
 use Lexical::Failure;
 use Keyword::Simple;
-use PadWalker 'peek_my';
 
-our $VERSION = '0.000004';
+our $VERSION = '0.000005';
 
 #====[ Implementation ]============
 
@@ -16,6 +15,8 @@ use List::Util 'max';
 
 state $max_leader_width = 3;
 state $runtime_lexhints = '@_____Running__Commentary__runtime_lexhints_____';
+state $next_scope = '1';
+state %scoped_flags;
 
 # Export the SAT interface...
 sub import {
@@ -31,12 +32,18 @@ sub import {
     no strict 'refs';
     *{caller().'::run'} = \&run;
 
+    # Label and initialize the initial scope for run_with args...
+    $^H{'Running::Commentary::scope_ID'} //= $next_scope;
+    $scoped_flags{$next_scope} = [];
+    $next_scope++;
+
     Keyword::Simple::define 'run_with', sub {
         my ($source_ref) = @_;
         ${$source_ref}
-            = qq{no warnings 'misc'; my $runtime_lexhints = eval { no strict 'vars'; $runtime_lexhints };}
-            . qq{$runtime_lexhints = Running::Commentary::_idem $runtime_lexhints, }
+            = qq{BEGIN{ \$^H{'Running::Commentary::scope_ID'} .= ',$next_scope'; }}
+            . qq{Running::Commentary::run_with }
             . ${$source_ref};
+        $next_scope++;
     };
 }
 
@@ -49,8 +56,10 @@ my $DEF_COLOUR    = { MESSAGE => 'bold white', DONE => 'bold cyan', FAILED => 'b
 
 # The entire interface...
 sub run {
-    # Parse out args (including local runtime hints as defaults)...
-    my @lex_args = @{ peek_my(1)->{$runtime_lexhints} // [] };
+    # Locate innermost lexical args...
+    my @lex_args = @{ _find_lex_args() };
+
+    # Parse out explicit and lexical args....
     my ($opt_ref, @args) = _parse_args(@lex_args, @_);
 
     # Resolve main args...
@@ -139,10 +148,31 @@ sub run {
     }
 }
 
+sub run_with {
+    my $scope_ID = (caller 0)[10]{'Running::Commentary::scope_ID'};
+    $scoped_flags{$scope_ID} = [ @{ _find_lex_args() }, @_];
+    return;
+}
+
+sub _find_lex_args {
+    # Start at the immediate caller's scope...
+    my $scope_ID = (caller 1)[10]{'Running::Commentary::scope_ID'};
+    my $lex_args_ref;
+
+    # Search outwards until an active scopeis found...
+    SCOPE:
+    while (1) {
+        $lex_args_ref = $scoped_flags{$scope_ID};
+        last SCOPE if $lex_args_ref;
+
+        $scope_ID =~ s{,[^,]+\Z}{}xms;
+    }
+
+    return $lex_args_ref // [];
+}
+
 sub _croak { require Carp; goto &Carp::croak }
 sub _carp  { require Carp; goto &Carp::carp  }
-
-sub _idem { return @_ }
 
 sub _parse_args {
     my %opt = ( -colour => $DEF_COLOUR );
@@ -275,7 +305,7 @@ Running::Commentary - call C<system> cleanly, with tracking messages
 
 =head1 VERSION
 
-This document describes Running::Commentary version 0.000004
+This document describes Running::Commentary version 0.000005
 
 
 =head1 SYNOPSIS
@@ -503,7 +533,7 @@ Useful for dry runs during development and testing.
 
 =item C<< -colour => \%COLOUR_SPEC >>
 
-Specify the colours to be used for messages and output. Colours 
+Specify the colours to be used for messages and output. Colours
 are specified as the values of the hash, with the keys indicating
 what purpose each colour is to be used for. For example:
 
@@ -595,9 +625,8 @@ Running::Commentary requires no configuration files or environment variables.
 This module requires Perl v5.14 or later.
 
 It also requires the modules:
-C<Lexical::Failure>,
-C<Keyword::Simple>, and 
-C<PadWalker>.
+C<Lexical::Failure>, and
+C<Keyword::Simple>.
 
 
 =head1 INCOMPATIBILITIES

@@ -19,6 +19,16 @@ Revision history for Running-Commentary
 
     - Reverted to previous behaviour.
       The workaround was ineffective in some cases
-      and the problem appears to be an actual bug 
+      and the problem appears to be an actual bug
       with lexical scoping inside closures in Perl 5.18.
 
+
+0.000005  Wed Jul 31 20:36:53 2013
+
+    - Found new workaround for 5.018 incompatibility.
+      "Problem" appears to be a deliberate choice by P5P
+      when optimizing the implementation of closures.
+      New solution is actually superior to original
+      (pre-5.18) solution, as it does not require
+      PadWalker, and hence is unlikely to break on
+      future changes in implementation.
